@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0e0e0e; --paper:#f7f6f1; --tint:#e8e6dd; --mute:#5d5b55;
+  --accent:#ff4b1f; --on-accent:#0e0e0e;
+  --sans:'Inter Tight',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 clamp(16px,4vw,48px)}
+.mono{font:500 .72rem var(--mono);letter-spacing:.07em;text-transform:uppercase}
+
+/* header */
+.top{display:flex;justify-content:space-between;gap:16px;padding:20px 0;color:var(--ink)}
+.top .sq{display:inline-block;width:.85em;height:.85em;background:var(--accent);margin-right:.7em;vertical-align:-.08em}
+h1.title{font-size:clamp(2.8rem,10vw,7.4rem);line-height:.9;letter-spacing:-.05em;font-weight:800;margin:clamp(24px,6vw,64px) 0 18px;overflow-wrap:anywhere}
+.title .dot{color:var(--accent)}
+.sub{max-width:44ch;font-size:clamp(1rem,2vw,1.25rem);color:var(--mute);margin:0 0 clamp(28px,5vw,56px)}
+.rule{border:0;border-top:2px solid var(--ink);margin:0}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:16px 0 32px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--ink);background:transparent;padding:6px 12px;cursor:pointer;border-radius:0}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.chip:hover{background:var(--accent);color:var(--on-accent)}
+.search{border:0;border-bottom:1.5px solid var(--ink);background:transparent;padding:6px 2px;min-width:200px;font:500 .8rem var(--mono);border-radius:0}
+
+/* grid + cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:56px 32px;padding-bottom:72px}
+.card{border-top:2px solid var(--ink);padding-top:14px;cursor:pointer;display:flex;flex-direction:column;gap:14px}
+.thumb{aspect-ratio:4/3;overflow:hidden;background:var(--tint)}
+.thumb img,.thumb svg{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s cubic-bezier(.2,.7,.2,1)}
+.card:hover .thumb img,.card:hover .thumb svg{transform:scale(1.05)}
+.body{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.body .row{width:100%;display:flex;justify-content:space-between;gap:12px;color:var(--mute)}
+.card h2{margin:0;font-size:1.5rem;line-height:1.08;letter-spacing:-.025em;font-weight:700}
+.plain{background:none;border:0;padding:0;text-align:left;cursor:pointer;font:inherit;letter-spacing:inherit}
+.card:hover h2 .plain{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:4px;text-underline-offset:5px}
+.sum{margin:0;color:var(--mute)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{border:1.5px solid var(--ink);padding:2px 8px;font:500 .68rem var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.badge{background:var(--accent);color:var(--on-accent);padding:3px 8px;font:500 .68rem var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.is-hidden{opacity:.55}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.empty{grid-column:1/-1;padding:48px 0;color:var(--mute);font-size:1.1rem}
+@media(min-width:760px){
+  .feature{grid-column:1/-1;display:grid;grid-template-columns:1.35fr 1fr;gap:36px}
+  .feature .thumb{aspect-ratio:16/10}
+  .feature h2{font-size:clamp(2rem,4vw,3.3rem);letter-spacing:-.04em;line-height:1}
+  .feature .sum{font-size:1.15rem}
+}
+
+/* post view */
+.back{margin:8px 0 0;background:none;border:0;padding:8px 0;cursor:pointer}
+.back:hover{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:4px}
+.post-head{padding:clamp(16px,4vw,40px) 0 28px}
+.post h1{font-size:clamp(2.3rem,7vw,5rem);line-height:.96;letter-spacing:-.045em;font-weight:800;margin:18px 0 16px;max-width:20ch;overflow-wrap:anywhere}
+.post .lede{font-size:clamp(1.1rem,2.2vw,1.45rem);color:var(--mute);max-width:46ch;margin:0}
+.post .meta{display:flex;gap:14px;align-items:center;color:var(--mute)}
+.cover{aspect-ratio:16/8;overflow:hidden;background:var(--tint)}
+.cover img,.cover svg{width:100%;height:100%;object-fit:cover;display:block}
+.prose{max-width:68ch;font-size:1.1rem;line-height:1.7;padding:44px 0 56px}
+.prose p{margin:0 0 1.2em}
+.prose h2{font-size:1.9rem;line-height:1.1;letter-spacing:-.03em;margin:2em 0 .6em}
+.prose h2::before{content:'';display:block;width:44px;height:7px;background:var(--accent);margin-bottom:14px}
+.prose h3{font-size:1.3rem;margin:1.8em 0 .4em;letter-spacing:-.02em}
+.prose ul{padding-left:1.2em;margin:0 0 1.2em}.prose li{margin:.3em 0}
+.prose li::marker{color:var(--accent)}
+.prose img{max-width:100%;height:auto;display:block;margin:1.6em 0}
+.prose blockquote{margin:1.6em 0;padding-left:20px;border-left:7px solid var(--accent);font-size:1.3rem;font-weight:500;line-height:1.4}
+.prose a{color:inherit;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:3px}
+.pn{display:grid;grid-template-columns:1fr 1fr;border-top:2px solid var(--ink)}
+.pn button{background:none;border:0;text-align:left;padding:22px 0;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.pn button:last-child{text-align:right;align-items:flex-end}
+.pn strong{font-size:1.2rem;letter-spacing:-.02em;line-height:1.15}
+.pn button:hover strong{text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:3px;text-underline-offset:4px}
+.pn .mono{color:var(--mute)}
+
+/* footer */
+.foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 0 28px;border-top:2px solid var(--ink);color:var(--mute)}
+.foot button{background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+
+/* buttons */
+.btn{display:inline-block;border:1.5px solid currentColor;background:transparent;padding:9px 14px;cursor:pointer;border-radius:0;font:500 .72rem var(--mono);letter-spacing:.06em;text-transform:uppercase;line-height:1.2}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--ink)}
+.btn.primary:hover{background:var(--ink);color:var(--paper)}
+.btn.sm{padding:5px 9px;font-size:.66rem}
+.btn.danger:hover{background:#b3261e;border-color:#b3261e;color:#fff}
+
+/* edit bar */
+.bar{position:sticky;top:0;z-index:20;background:var(--ink);color:var(--paper)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding-top:10px;padding-bottom:10px}
+.bar .state{margin-right:auto}
+.bar .dirty{color:var(--accent)}
+.bar .btn{border-color:rgba(255,255,255,.45)}
+.bar .btn:hover{background:var(--paper);color:var(--ink)}
+.bar .btn.primary{border-color:var(--accent)}
+.bar .btn.primary:hover{background:var(--paper);color:var(--ink)}
+.bar :focus-visible{outline-color:var(--paper)}
+
+/* dialogs */
+dialog{border:2px solid var(--ink);padding:0;background:var(--paper);color:var(--ink);width:min(720px,94vw);max-height:92vh;overflow:auto}
+dialog::backdrop{background:rgba(14,14,14,.6)}
+.dlg{padding:clamp(18px,3vw,30px);display:flex;flex-direction:column;gap:16px}
+.dh{margin:0;font-size:1.7rem;letter-spacing:-.03em;font-weight:800;line-height:1}
+.dlg label,.dlg .field{display:flex;flex-direction:column;gap:6px}
+.lab{font:500 .68rem var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.dlg input[type=text],.dlg input:not([type]),.dlg input[type=date],.dlg input[type=password],.dlg textarea{border:1.5px solid var(--ink);background:#fff;padding:10px;border-radius:0;width:100%}
+.dlg textarea{resize:vertical;line-height:1.5;font-size:.95rem}
+.dlg input[type=color]{width:54px;height:40px;border:1.5px solid var(--ink);padding:2px;background:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.inline{display:flex;gap:8px;align-items:stretch}
+.inline input{flex:1}
+.hint{font-size:.82rem;color:var(--mute);margin:0}
+.checks{display:flex;gap:20px;flex-wrap:wrap}
+.checks label{flex-direction:row;align-items:center;gap:8px}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.tb{display:flex;gap:6px;flex-wrap:wrap}
+.err{color:#b3261e;margin:0;min-height:1.2em;font-size:.9rem}
+.swatches{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sw{width:28px;height:28px;border:1.5px solid var(--ink);cursor:pointer;padding:0}
+.steps{margin:0;padding-left:1.2em}.steps li{margin:.35em 0}
+.code{font:.75rem/1.4 var(--mono)!important;height:110px}
+.ask{margin:0;font-size:1.1rem}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:11px 18px;z-index:99;font:500 .75rem var(--mono);letter-spacing:.05em;text-transform:uppercase;max-width:92vw}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+
+<!-- ============================================================
+     YOUR CONTENT LIVES HERE. The widget rewrites this block when
+     you click Publish → Copy embed code. You don't need to touch it.
+     ============================================================ -->
+<script id="blog-data" type="application/json">
+{
+  "settings": {
+    "title": "Design Journal",
+    "subtitle": "Year 6 MYP Design — how we investigate, imagine, make and improve.",
+    "accent": "#ff4b1f",
+    "pass": ""
+  },
+  "updated": 0,
+  "posts": [
+    {
+      "id": "p-welcome",
+      "title": "Welcome to the design studio",
+      "date": "2026-09-08",
+      "tag": "Inquire & Analyse",
+      "summary": "Good design starts with a question. This term we ask: who is this for, and what do they really need?",
+      "body": "# Start with people\n\nEvery great product began as a problem someone noticed. Before we sketch anything, we **look closely** at the people we are designing for.\n\n## Our design cycle\n\n- **Inquire & Analyse** – understand the problem\n- **Develop Ideas** – imagine many solutions\n- **Create the Solution** – make and test a prototype\n- **Evaluate** – decide how well it worked\n\n> Design is not just what it looks like. Design is how it works.\n\nKeep a note of anything in your day that annoys you. Annoyances are the seeds of good design briefs.",
+      "cover": "",
+      "pinned": true,
+      "hidden": false
+    },
+    {
+      "id": "p-bridge",
+      "title": "Paper bridge challenge",
+      "date": "2026-09-22",
+      "tag": "Create the Solution",
+      "summary": "One sheet of paper, twelve centimetres of gap, and as many coins as it can hold.",
+      "body": "## The brief\n\nBuild a bridge from **one sheet of A4 paper** that spans a 12 cm gap and holds the most coins.\n\n## What we learned\n\n- Folding paper into a *tube* or a *corrugated* shape makes it much stronger.\n- Our first prototypes failed in the middle, so we tested again and reinforced the centre.\n- Small changes, one at a time, taught us the most.\n\n[Read more about structures](https://www.designcouncil.org.uk)",
+      "cover": "",
+      "pinned": false,
+      "hidden": false
+    },
+    {
+      "id": "p-reflect",
+      "title": "What worked, what didn't",
+      "date": "2026-10-05",
+      "tag": "Evaluate",
+      "summary": "Evaluating honestly is a design skill. Here is how to judge your own work against your success criteria.",
+      "body": "## Judge it against the criteria\n\nPick each success criterion you wrote at the start and ask: **did my prototype meet it?** Give evidence, not opinions.\n\n## Three questions for your evaluation\n\n- What worked well, and how do I know?\n- What would I change next time?\n- How did my design affect the people who use it?",
+      "cover": "",
+      "pinned": false,
+      "hidden": false
+    }
+  ]
+}
+</script>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- helpers ---------- */
+var $ = function(s, r){ return (r||document).querySelector(s); };
+var app = $('#app'), layer = $('#layer');
+var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+var pad = function(n){ return String(n).padStart(2,'0'); };
+var today = function(){ return new Date().toISOString().slice(0,10); };
+var fmtDate = function(d){ if(!d) return ''; var t = new Date(d+'T00:00:00'); return isNaN(t) ? esc(d) : t.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); };
+var uid = function(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); };
+var ls = {
+  get: function(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set: function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del: function(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+/* passcode hash (cyrb53) – keeps the edit panel away from curious students.
+   It is a door latch, not a vault: see the notes in the README text. */
+function hash(str){
+  var h1=0xdeadbeef, h2=0x41c6ce57, ch;
+  for(var i=0;i<str.length;i++){ ch=str.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
+}
+var passHash = function(p){ return hash('myp-design:'+p); };
+function fixUrl(u){
+  u = (u||'').trim();
+  var m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
+  if(m) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1200';
+  return /^(https?:\/\/|data:image\/)/i.test(u) ? u : '';
+}
+function onColor(hex){
+  var n=parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255;
+  return (0.299*r+0.587*g+0.114*b) > 150 ? '#0e0e0e' : '#ffffff';
+}
+
+/* ---------- state ---------- */
+var DRAFT = 'design-journal-draft-v1';
+var DEFAULT_TAGS = ['Inquire & Analyse','Develop Ideas','Create the Solution','Evaluate','Showcase','Class news'];
+var ACCENTS = ['#ff4b1f','#ffd400','#2f5bff','#00a676','#ff7ab6','#7a3cff'];
+
+function normalise(d){
+  d = d || {};
+  var s = d.settings || {};
+  return {
+    settings: {
+      title: s.title || 'Design Journal',
+      subtitle: s.subtitle || '',
+      accent: /^#[0-9a-f]{6}$/i.test(s.accent||'') ? s.accent : '#ff4b1f',
+      pass: s.pass || ''
+    },
+    updated: d.updated || 0,
+    posts: (Array.isArray(d.posts) ? d.posts : []).map(function(p){
+      return { id:p.id||uid(), title:p.title||'Untitled', date:p.date||today(), tag:p.tag||'', summary:p.summary||'',
+               body:p.body||'', cover:p.cover||'', pinned:!!p.pinned, hidden:!!p.hidden };
+    })
+  };
+}
+var data = normalise(JSON.parse($('#blog-data').textContent));
+var publishedSnapshot = JSON.stringify(data);
+var st = { edit:false, dirty:false, view:'list', tag:'All', q:'' };
+
+function commit(){
+  data.updated = Date.now();
+  st.dirty = true;
+  ls.set(DRAFT, JSON.stringify(data));
+  render();
+}
+function toast(msg){
+  var t = document.createElement('div');
+  t.className = 'toast'; t.setAttribute('role','status'); t.textContent = msg;
+  layer.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 3000);
+}
+
+/* ---------- tiny markdown (escaped first, so safe) ---------- */
+function inline(s){
+  return s
+    .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,'<img src="$2" alt="$1" loading="lazy">')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>');
+}
+function md(src){
+  var lines = esc(src).split(/\r?\n/), out = [], para = [], list = false;
+  function flushP(){ if(para.length){ out.push('<p>'+inline(para.join('<br>'))+'</p>'); para = []; } }
+  function flushL(){ if(list){ out.push('</ul>'); list = false; } }
+  lines.forEach(function(l){
+    var m;
+    if(!l.trim()){ flushP(); flushL(); return; }
+    if((m = l.match(/^##\s+(.*)/))){ flushP(); flushL(); out.push('<h3>'+inline(m[1])+'</h3>'); return; }
+    if((m = l.match(/^#\s+(.*)/))){ flushP(); flushL(); out.push('<h2>'+inline(m[1])+'</h2>'); return; }
+    if((m = l.match(/^[-*]\s+(.*)/))){ flushP(); if(!list){ out.push('<ul>'); list = true; } out.push('<li>'+inline(m[1])+'</li>'); return; }
+    if((m = l.match(/^&gt;\s?(.*)/))){ flushP(); flushL(); out.push('<blockquote>'+inline(m[1])+'</blockquote>'); return; }
+    flushL(); para.push(l);
+  });
+  flushP(); flushL();
+  return out.join('\n');
+}
+
+/* ---------- generated cover art (Bauhaus-style, seeded by post id) ---------- */
+function art(seed){
+  var s = parseInt(hash(seed),36) || 1;
+  var r = function(){ s = (s*1664525+1013904223)>>>0; return s/4294967296; };
+  var bgs = ['var(--tint)','var(--accent)','var(--ink)'];
+  var bg = bgs[Math.floor(r()*3)];
+  var pal = ['var(--accent)','var(--ink)','var(--paper)','var(--tint)'].filter(function(c){ return c!==bg; });
+  var svg = '<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="400" height="300" fill="'+bg+'"/>';
+  for(var i=0;i<3;i++){
+    var c = pal[Math.floor(r()*pal.length)], t = Math.floor(r()*4);
+    var x = 40+r()*300, y = 30+r()*220, k = 50+r()*80;
+    if(t===0) svg += '<circle cx="'+x.toFixed(0)+'" cy="'+y.toFixed(0)+'" r="'+(k*.8).toFixed(0)+'" fill="'+c+'"/>';
+    else if(t===1) svg += '<rect x="'+(x-k/2).toFixed(0)+'" y="'+(y-k/2).toFixed(0)+'" width="'+k.toFixed(0)+'" height="'+(k*(.6+r()*.9)).toFixed(0)+'" fill="'+c+'"/>';
+    else if(t===2) svg += '<polygon points="'+x.toFixed(0)+','+(y-k).toFixed(0)+' '+(x+k).toFixed(0)+','+(y+k*.7).toFixed(0)+' '+(x-k).toFixed(0)+','+(y+k*.7).toFixed(0)+'" fill="'+c+'"/>';
+    else svg += '<path d="M'+x.toFixed(0)+' '+y.toFixed(0)+' h'+k.toFixed(0)+' a'+k.toFixed(0)+' '+k.toFixed(0)+' 0 0 1 -'+k.toFixed(0)+' '+k.toFixed(0)+' z" fill="'+c+'"/>';
+  }
+  return svg + '</svg>';
+}
+var coverHtml = function(p){ return p.cover ? '<img src="'+esc(p.cover)+'" alt="" loading="lazy">' : art(p.id); };
+
+/* ---------- views ---------- */
+function applyTheme(){
+  var a = data.settings.accent;
+  document.documentElement.style.setProperty('--accent', a);
+  document.documentElement.style.setProperty('--on-accent', onColor(a));
+  document.title = data.settings.title;
+}
+var visible = function(){ return data.posts.filter(function(p){ return st.edit || !p.hidden; }); };
+var newestFirst = function(a,b){ return ((b.pinned?1:0)-(a.pinned?1:0)) || b.date.localeCompare(a.date); };
+function numbers(){
+  var m = {};
+  visible().slice().sort(function(a,b){ return a.date.localeCompare(b.date); }).forEach(function(p,i){ m[p.id] = i+1; });
+  return m;
+}
+function tools(p){
+  if(!st.edit) return '';
+  return '<div class="tools">'+
+    '<button class="btn sm" data-act="edit" data-id="'+p.id+'">Edit</button>'+
+    '<button class="btn sm" data-act="pin" data-id="'+p.id+'">'+(p.pinned?'Unpin':'Pin')+'</button>'+
+    '<button class="btn sm" data-act="hide" data-id="'+p.id+'">'+(p.hidden?'Show':'Hide')+'</button>'+
+    '<button class="btn sm danger" data-act="del" data-id="'+p.id+'">Delete</button></div>';
+}
+function bar(){
+  return '<div class="bar"><div class="wrap">'+
+    '<span class="state mono">Edit mode '+(st.dirty?'<span class="dirty">● unpublished changes</span>':'')+'</span>'+
+    '<button class="btn" data-act="new">+ New post</button>'+
+    '<button class="btn" data-act="settings">Settings</button>'+
+    '<button class="btn primary" data-act="publish">Publish</button>'+
+    '<button class="btn" data-act="exit">Exit</button></div></div>';
+}
+function foot(){
+  return '<div class="foot mono"><span>© '+new Date().getFullYear()+' '+esc(data.settings.title)+'</span>'+
+    (st.edit ? '<span>Teacher mode</span>' : '<button data-act="unlock">Teacher sign in</button>')+'</div>';
+}
+function listView(){
+  var all = visible();
+  var tags = Array.from(new Set(all.map(function(p){ return p.tag; }).filter(Boolean)));
+  var chips = ['All'].concat(tags).map(function(t){
+    return '<button class="chip mono" data-act="tag" data-tag="'+esc(t)+'" aria-pressed="'+(st.tag===t)+'">'+esc(t)+'</button>';
+  }).join('');
+  return '<header>'+
+    '<div class="top mono"><span><i class="sq"></i>Year 6 · MYP Design</span><span>'+pad(all.length)+' posts</span></div>'+
+    '<hr class="rule">'+
+    '<h1 class="title">'+esc(data.settings.title)+'<span class="dot">.</span></h1>'+
+    (data.settings.subtitle ? '<p class="sub">'+esc(data.settings.subtitle)+'</p>' : '')+
+    '<hr class="rule">'+
+    '<div class="controls"><div class="chips" role="group" aria-label="Filter posts">'+chips+'</div>'+
+    '<input class="search" id="q" type="search" placeholder="Search posts" aria-label="Search posts" value="'+esc(st.q)+'"></div></header>'+
+    '<main><div class="grid" id="grid"></div></main>';
+}
+function drawGrid(){
+  var g = $('#grid'); if(!g) return;
+  var nums = numbers();
+  var list = visible().filter(function(p){
+    return (st.tag==='All' || p.tag===st.tag) &&
+           (!st.q || (p.title+' '+p.summary+' '+p.body+' '+p.tag).toLowerCase().indexOf(st.q)>-1);
+  }).sort(newestFirst);
+  if(!list.length){
+    g.innerHTML = '<p class="empty">'+(data.posts.length ? 'Nothing matches that search.' : (st.edit ? 'No posts yet — click “+ New post” to write your first one.' : 'No posts yet. Check back soon.'))+'</p>';
+    return;
+  }
+  g.innerHTML = list.map(function(p,i){
+    var feature = i===0 && list.length>1 && st.tag==='All' && !st.q;
+    return '<article class="card'+(feature?' feature':'')+(p.hidden?' is-hidden':'')+'" data-act="open" data-id="'+p.id+'">'+
+      '<div class="thumb">'+coverHtml(p)+'</div>'+
+      '<div class="body">'+
+        '<div class="row mono"><span>'+pad(nums[p.id]||0)+'</span><span>'+fmtDate(p.date)+'</span></div>'+
+        '<h2><button class="plain" data-act="open" data-id="'+p.id+'">'+esc(p.title)+'</button></h2>'+
+        (p.summary ? '<p class="sum">'+esc(p.summary)+'</p>' : '')+
+        '<div class="tags">'+(p.tag?'<span class="tag">'+esc(p.tag)+'</span>':'')+(p.pinned?'<span class="badge">Pinned</span>':'')+(p.hidden?'<span class="badge">Hidden</span>':'')+'</div>'+
+        tools(p)+
+      '</div></article>';
+  }).join('');
+}
+function postView(p){
+  var chrono = visible().slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
+  var i = chrono.findIndex(function(x){ return x.id===p.id; });
+  var older = chrono[i-1], newer = chrono[i+1];
+  var nums = numbers();
+  return '<article class="post">'+
+    '<button class="back mono" data-act="back">← All posts</button><hr class="rule">'+
+    '<div class="post-head">'+
+      '<div class="meta mono"><span>'+pad(nums[p.id]||0)+'</span><span>'+fmtDate(p.date)+'</span>'+(p.tag?'<span class="tag">'+esc(p.tag)+'</span>':'')+(p.hidden?'<span class="badge">Hidden</span>':'')+'</div>'+
+      '<h1>'+esc(p.title)+'</h1>'+
+      (p.summary ? '<p class="lede">'+esc(p.summary)+'</p>' : '')+
+      tools(p)+
+    '</div>'+
+    '<div class="cover">'+coverHtml(p)+'</div>'+
+    '<div class="prose">'+md(p.body)+'</div>'+
+    '<nav class="pn" aria-label="More posts">'+
+      (older ? '<button data-act="open" data-id="'+older.id+'"><span class="mono">← Older</span><strong>'+esc(older.title)+'</strong></button>' : '<span></span>')+
+      (newer ? '<button data-act="open" data-id="'+newer.id+'"><span class="mono">Newer →</span><strong>'+esc(newer.title)+'</strong></button>' : '<span></span>')+
+    '</nav></article>';
+}
+function render(){
+  applyTheme();
+  var p = st.view!=='list' && data.posts.find(function(x){ return x.id===st.view; });
+  if(st.view!=='list' && (!p || (p.hidden && !st.edit))) st.view = 'list';
+  app.innerHTML = (st.edit ? bar() : '') + '<div class="wrap">' + (st.view==='list' ? listView() : postView(p)) + foot() + '</div>';
+  if(st.view==='list') drawGrid();
+}
+
+/* ---------- dialogs ---------- */
+function dlg(html){
+  var d = document.createElement('dialog');
+  d.innerHTML = html;
+  layer.appendChild(d);
+  d.addEventListener('close', function(){ d.remove(); });
+  d.showModal();
+  return d;
+}
+function ask(msg, ok){
+  return new Promise(function(res){
+    var v = false;
+    var d = dlg('<div class="dlg"><p class="ask">'+msg+'</p><div class="actions"><button class="btn" data-act="no">Cancel</button><button class="btn primary" data-act="yes">'+(ok||'Confirm')+'</button></div></div>');
+    d.addEventListener('click', function(e){ var b = e.target.closest('[data-act]'); if(b){ v = b.dataset.act==='yes'; d.close(); } });
+    d.addEventListener('close', function(){ res(v); });
+  });
+}
+function shrink(file, max, q){
+  return new Promise(function(res, rej){
+    var img = new Image(), u = URL.createObjectURL(file);
+    img.onload = function(){
+      var k = Math.min(1, max/Math.max(img.width, img.height));
+      var c = document.createElement('canvas');
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(u); res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = rej; img.src = u;
+  });
+}
+function download(name, text, type){
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:type||'text/html'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+var slug = function(s){ return (s||'blog').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'blog'; };
+
+function unlock(){
+  var first = !data.settings.pass;
+  var d = dlg('<form class="dlg"><h3 class="dh">'+(first?'Create your passcode':'Teacher sign in')+'</h3>'+
+    '<p class="hint">'+(first ? 'Choose a passcode (4+ characters). You will type it each time you want to edit. Write it down.' : 'Enter your passcode to add, edit or remove posts.')+'</p>'+
+    '<label><span class="lab">Passcode</span><input type="password" name="pw" required minlength="'+(first?4:1)+'" autocomplete="off"></label>'+
+    '<p class="err" role="alert"></p>'+
+    '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">'+(first?'Save & continue':'Sign in')+'</button></div></form>');
+  var f = d.querySelector('form'); f.pw.focus();
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var h = passHash(f.pw.value);
+    if(first){ data.settings.pass = h; }
+    else if(h !== data.settings.pass){ d.querySelector('.err').textContent = 'That passcode is not right.'; f.pw.select(); return; }
+    d.close();
+    var dr = ls.get(DRAFT);
+    if(dr){ try{ var dd = normalise(JSON.parse(dr)); if(dd.updated > data.updated){ data = dd; toast('Restored your unpublished draft'); } }catch(x){} }
+    st.edit = true;
+    if(first) commit(); else render();
+  });
+}
+
+function editor(id){
+  var ex = id && data.posts.find(function(p){ return p.id===id; });
+  var p = ex ? Object.assign({}, ex) : { title:'', date:today(), tag:'', summary:'', body:'', cover:'', pinned:false, hidden:false };
+  var cover = p.cover;
+  var tags = Array.from(new Set(DEFAULT_TAGS.concat(data.posts.map(function(x){ return x.tag; }).filter(Boolean))));
+  var d = dlg('<form class="dlg" autocomplete="off"><h3 class="dh">'+(ex?'Edit post':'New post')+'</h3>'+
+    '<label><span class="lab">Title</span><input name="title" required maxlength="120" value="'+esc(p.title)+'"></label>'+
+    '<div class="two"><label><span class="lab">Date</span><input type="date" name="date" required value="'+esc(p.date)+'"></label>'+
+    '<label><span class="lab">Category</span><input name="tag" list="tags" maxlength="40" value="'+esc(p.tag)+'"><datalist id="tags">'+tags.map(function(t){ return '<option value="'+esc(t)+'">'; }).join('')+'</datalist></label></div>'+
+    '<label><span class="lab">Short summary</span><input name="summary" maxlength="200" value="'+esc(p.summary)+'"></label>'+
+    '<div class="field"><span class="lab">Cover image</span><div class="inline"><input name="cover" placeholder="Paste an image link…" value="'+(cover.indexOf('data:')===0?'':esc(cover))+'">'+
+    '<label class="btn">Upload<input type="file" accept="image/*" hidden></label><button type="button" class="btn" data-act="nocover">Remove</button></div>'+
+    '<p class="hint" id="cstat">'+(cover.indexOf('data:')===0?'Uploaded image attached.':'No image? A geometric cover is generated for you.')+'</p></div>'+
+    '<div class="field"><span class="lab">Post</span><div class="tb">'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="h">Heading</button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="b"><b>Bold</b></button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="i"><i>Italic</i></button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="ul">• List</button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="q">“ Quote</button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="a">Link</button></div>'+
+      '<textarea name="body" rows="11"></textarea>'+
+      '<p class="hint">Leave a blank line for a new paragraph. Use # for a heading. Images: ![description](https://image-link).</p></div>'+
+    '<div class="checks"><label><input type="checkbox" name="pinned"> Pin to top</label><label><input type="checkbox" name="hidden"> Hide (keep as draft)</label></div>'+
+    '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Save post</button></div></form>');
+  var f = d.querySelector('form');
+  f.body.value = p.body; f.pinned.checked = p.pinned; f.hidden.checked = p.hidden;
+  var stat = d.querySelector('#cstat');
+  f.cover.addEventListener('input', function(){ cover = f.cover.value; stat.textContent = ''; });
+  d.querySelector('input[type=file]').addEventListener('change', function(e){
+    var file = e.target.files[0]; if(!file) return;
+    stat.textContent = 'Resizing…';
+    shrink(file, 900, 0.72).then(function(url){
+      cover = url; f.cover.value = '';
+      stat.textContent = 'Uploaded image attached (' + Math.round(url.length*0.75/1024) + ' KB).';
+    }).catch(function(){ stat.textContent = 'Could not read that image.'; });
+  });
+  d.addEventListener('click', function(e){
+    var b = e.target.closest('[data-act]'); if(!b) return;
+    if(b.dataset.act==='nocover'){ cover = ''; f.cover.value = ''; stat.textContent = 'Cover removed.'; }
+    if(b.dataset.act==='fmt') format(f.body, b.dataset.f);
+  });
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var np = { title:f.title.value.trim(), date:f.date.value, tag:f.tag.value.trim(), summary:f.summary.value.trim(),
+               body:f.body.value, cover:fixUrl(cover), pinned:f.pinned.checked, hidden:f.hidden.checked };
+    if(ex) Object.assign(ex, np); else { np.id = uid(); data.posts.push(np); }
+    d.close(); commit(); toast('Post saved');
+  });
+  f.title.focus();
+}
+function format(ta, kind){
+  var s = ta.selectionStart, e = ta.selectionEnd, v = ta.value, sel = v.slice(s,e);
+  if(kind==='b' || kind==='i'){
+    var m = kind==='b' ? '**' : '*';
+    ta.setRangeText(m+(sel||'text')+m, s, e, 'select');
+  } else if(kind==='a'){
+    ta.setRangeText('['+(sel||'link text')+'](https://)', s, e, 'select');
+  } else {
+    var pre = {h:'# ', ul:'- ', q:'> '}[kind];
+    var ls0 = v.lastIndexOf('\n', s-1)+1;
+    var seg = v.slice(ls0, e) || '';
+    ta.setRangeText(seg.split('\n').map(function(l){ return pre+l; }).join('\n'), ls0, e, 'select');
+  }
+  ta.focus();
+}
+
+function settingsDialog(){
+  var s = data.settings;
+  var d = dlg('<form class="dlg"><h3 class="dh">Settings</h3>'+
+    '<label><span class="lab">Page title</span><input name="title" required maxlength="60" value="'+esc(s.title)+'"></label>'+
+    '<label><span class="lab">Subtitle</span><input name="subtitle" maxlength="140" value="'+esc(s.subtitle)+'"></label>'+
+    '<div class="field"><span class="lab">Accent colour</span><div class="swatches"><input type="color" name="accent" value="'+esc(s.accent)+'" aria-label="Accent colour">'+
+    ACCENTS.map(function(c){ return '<button type="button" class="sw" style="background:'+c+'" data-act="swatch" data-c="'+c+'" aria-label="Use '+c+'"></button>'; }).join('')+'</div></div>'+
+    '<label><span class="lab">New passcode <span style="text-transform:none;letter-spacing:0">(leave blank to keep current)</span></span><input type="password" name="pw" autocomplete="off"></label>'+
+    '<div class="field"><span class="lab">Backup</span><div class="actions" style="justify-content:flex-start">'+
+      '<button type="button" class="btn sm" data-act="export">Download backup (.json)</button>'+
+      '<label class="btn sm">Restore backup<input type="file" accept=".json,application/json" hidden></label></div></div>'+
+    '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Save settings</button></div></form>');
+  var f = d.querySelector('form');
+  d.addEventListener('click', function(e){
+    var b = e.target.closest('[data-act]'); if(!b) return;
+    if(b.dataset.act==='swatch') f.accent.value = b.dataset.c;
+    if(b.dataset.act==='export') download(slug(s.title)+'-backup.json', JSON.stringify(data,null,2), 'application/json');
+  });
+  d.querySelector('input[type=file]').addEventListener('change', function(e){
+    var file = e.target.files[0]; if(!file) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{
+        var imp = normalise(JSON.parse(rd.result));
+        if(!imp.settings.pass) imp.settings.pass = data.settings.pass;
+        data = imp; d.close(); commit(); toast('Backup restored');
+      }catch(x){ toast('That file is not a valid backup'); }
+    };
+    rd.readAsText(file);
+  });
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    s.title = f.title.value.trim() || 'Design Journal';
+    s.subtitle = f.subtitle.value.trim();
+    s.accent = f.accent.value;
+    if(f.pw.value){ s.pass = passHash(f.pw.value); }
+    d.close(); commit(); toast('Settings saved');
+  });
+}
+
+/* ---------- publish ---------- */
+function buildPage(){
+  var c = document.documentElement.cloneNode(true);
+  c.querySelector('#app').innerHTML = '';
+  c.querySelector('#layer').innerHTML = '';
+  c.querySelector('#blog-data').textContent = '\n' + JSON.stringify(data, null, 2).replace(/</g,'\\u003c') + '\n';
+  c.removeAttribute('style');
+  return '<!DOCTYPE html>\n' + c.outerHTML;
+}
+function publishDialog(){
+  var code = buildPage();
+  var kb = Math.round(code.length/1024);
+  var d = dlg('<div class="dlg"><h3 class="dh">Publish to Google Sites</h3>'+
+    '<ol class="steps">'+
+      '<li>Click <b>Copy embed code</b> (or download the file).</li>'+
+      '<li>In Google Sites: <b>Insert → Embed → Embed code</b>, paste, then <b>Next → Insert</b>.</li>'+
+      '<li>To update later: click the embed, choose its <b>edit</b> icon, replace the old code with this new code.</li>'+
+      '<li>Finally press <b>Publish</b> at the top of Google Sites.</li></ol>'+
+    '<p class="hint">Size: '+kb+' KB. '+(kb>600?'<b>That is large</b> – Google Sites may refuse it. Use image links instead of uploads, or remove old images.':'Comfortable for an embed.')+'</p>'+
+    '<textarea class="code" readonly aria-label="Embed code"></textarea>'+
+    '<div class="actions"><button class="btn" data-act="discard">Discard unpublished changes</button><button class="btn" data-act="dl">Download .html</button><button class="btn primary" data-act="copy">Copy embed code</button></div></div>');
+  var ta = d.querySelector('textarea'); ta.value = code;
+  d.addEventListener('click', function(e){
+    var b = e.target.closest('[data-act]'); if(!b) return;
+    var a = b.dataset.act;
+    if(a==='copy'){
+      var ok = function(){ st.dirty = false; render(); toast('Copied — now paste it into Google Sites'); };
+      var fallback = function(){ ta.focus(); ta.select(); var r = false; try{ r = document.execCommand('copy'); }catch(x){} if(r) ok(); else toast('Press Ctrl/Cmd+C to copy the selected code'); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, fallback); else fallback();
+    }
+    if(a==='dl'){ download(slug(data.settings.title)+'.html', code); st.dirty = false; render(); toast('Downloaded'); }
+    if(a==='discard'){
+      d.close();
+      ask('Throw away every change since the last version you published? This cannot be undone.', 'Discard changes').then(function(yes){
+        if(!yes) return;
+        data = normalise(JSON.parse(publishedSnapshot)); ls.del(DRAFT); st.dirty = false; render(); toast('Back to the published version');
+      });
+    }
+  });
+}
+
+/* ---------- actions ---------- */
+var A = {
+  open: function(id){ st.view = id; render(); window.scrollTo(0,0); },
+  back: function(){ st.view = 'list'; render(); window.scrollTo(0,0); },
+  tag: function(id,t){ st.tag = t.dataset.tag; render(); },
+  unlock: unlock,
+  exit: function(){ st.edit = false; render(); if(st.dirty) toast('Draft saved on this device'); },
+  'new': function(){ editor(); },
+  edit: function(id){ editor(id); },
+  settings: settingsDialog,
+  publish: publishDialog,
+  close: function(id,t){ t.closest('dialog').close(); },
+  pin: function(id){ var p = data.posts.find(function(x){ return x.id===id; }); p.pinned = !p.pinned; commit(); },
+  hide: function(id){ var p = data.posts.find(function(x){ return x.id===id; }); p.hidden = !p.hidden; commit(); },
+  del: function(id){
+    var p = data.posts.find(function(x){ return x.id===id; });
+    ask('Delete “'+esc(p.title)+'”? You can bring it back by choosing “Discard unpublished changes” before you publish.', 'Delete').then(function(yes){
+      if(!yes) return;
+      data.posts = data.posts.filter(function(x){ return x.id!==id; });
+      if(st.view===id) st.view = 'list';
+      commit(); toast('Post deleted');
+    });
+  }
+};
+function onClick(e){
+  var t = e.target.closest('[data-act]');
+  if(!t) return;
+  var fn = A[t.dataset.act];
+  if(fn) fn(t.dataset.id, t, e);
+}
+app.addEventListener('click', onClick);
+layer.addEventListener('click', onClick);
+app.addEventListener('input', function(e){
+  if(e.target.id==='q'){ st.q = e.target.value.trim().toLowerCase(); drawGrid(); }
+});
+
+render();
+})();
+</script>
+</body>
+</html>
