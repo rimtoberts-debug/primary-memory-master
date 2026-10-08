@@ -32,7 +32,8 @@ h1{margin:0 0 4px;font-size:clamp(1.35rem,3.2vw,2.3rem);line-height:1.15}
 .t{font-weight:700;font-size:1.12rem}
 .d{width:100%;font-size:.85rem;color:var(--mute)}
 .txt{padding:4px 16px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
-.txt a{color:#1f5fd1}
+.txt a{color:#1f5fd1;font-weight:500;text-decoration:underline;text-underline-offset:2px}
+.txt a::after{content:'\2197';font-size:.8em;margin-left:2px}
 .tools{display:flex;gap:8px;padding:0 16px 14px}
 .empty{padding:28px 0;color:var(--mute)}
 .foot{display:flex;justify-content:space-between;gap:10px;margin-top:22px;font-size:.8rem;color:var(--mute)}
@@ -68,6 +69,12 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 .types label{flex-direction:row;align-items:center;gap:7px;border:2px solid var(--c);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:700;font-size:.85rem}
 .types input{accent-color:var(--c)}
 .types label:has(input:checked){background:var(--c);color:#fff}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>.lab{font-size:.85rem;font-weight:700}
+.tb{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.linkrow{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:8px;background:#eef3fd;border:1px solid #c3d4f5}
+.linkrow[hidden]{display:none}
+.linkrow label{font-size:.8rem}
 .hint{margin:0;font-size:.82rem;color:var(--mute);font-weight:400}
 .note{margin:0;padding:9px 11px;border-radius:6px;background:#fff3cd;border:1px solid #e6cf7a;font-size:.85rem;font-weight:400}
 .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
@@ -156,7 +163,11 @@ function toast(m){ var t = document.createElement('div'); t.className='toast'; t
 
 /* plain text -> safe HTML with clickable links */
 function richText(s){
-  return esc(s).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+  var out = esc(String(s).replace(/\u0000/g,'')), links = [];
+  function a(u,t){ var h = /^www\./i.test(u) ? 'https://'+u : u; links.push('<a href="'+h+'" target="_blank" rel="noopener noreferrer">'+t+'</a>'); return '\u0000'+(links.length-1)+'\u0000'; }
+  out = out.replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|www\.)[^\s)]+)\)/gi, function(_,t,u){ return a(u,t); });
+  out = out.replace(/((?:https?:\/\/|www\.)[^\s\u0000]*[^\s\u0000.,;:!?)\]'"])/gi, function(u){ return a(u,u); });
+  return out.replace(/\u0000(\d+)\u0000/g, function(_,i){ return links[i]; });
 }
 
 function bar(){
@@ -227,10 +238,35 @@ function editor(id){
     '<div class="two"><label>Posted<input type="date" name="date" required value="'+esc(p.date)+'"></label><label>Due (optional)<input type="date" name="due" value="'+esc(p.due)+'"></label></div>'+
     '<div><div style="font-size:.85rem;font-weight:700;margin-bottom:6px">Colour code</div><div class="types">'+
       TYPES.map(function(t){ return '<label style="--c:'+t.c+'"><input type="radio" name="type" value="'+t.k+'"'+(p.type===t.k?' checked':'')+'>'+t.n+'</label>'; }).join('')+'</div></div>'+
-    '<label>Homework text<textarea name="text" rows="12" placeholder="Paste this week\'s homework here"></textarea></label>'+
-    '<p class="hint">Plain text. Line breaks are kept and web links become clickable.</p>'+
+    '<div class="field"><label class="lab" for="ptext">Homework text</label>'+
+      '<div class="tb"><button type="button" class="btn sm" data-act="addlink">+ Add link</button><span class="hint">Highlight some words first to turn them into the link.</span></div>'+
+      '<div class="linkrow" id="linkrow" hidden>'+
+        '<label>Words to show<input name="ltext" placeholder="e.g. Open the worksheet"></label>'+
+        '<label>Web address<input name="lurl" placeholder="https://docs.google.com/…" inputmode="url"></label>'+
+        '<p class="err" id="lerr" role="alert"></p>'+
+        '<div class="actions"><button type="button" class="btn sm" data-act="cancellink">Cancel</button><button type="button" class="btn sm primary" data-act="putlink">Insert link</button></div></div>'+
+      '<textarea id="ptext" name="text" rows="12" placeholder="Paste this week\'s homework here"></textarea>'+
+      '<p class="hint">Line breaks are kept. Web addresses become clickable links automatically.</p></div>'+
     '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Save</button></div></form>');
   var f = d.querySelector('form'); f.text.value = p.text; f.title.focus();
+  var lr = d.querySelector('#linkrow'), lt = f.ltext, lu = f.lurl, le = d.querySelector('#lerr'), s0 = 0, e0 = 0;
+  function openLink(){
+    s0 = f.text.selectionStart; e0 = f.text.selectionEnd;
+    lt.value = f.text.value.slice(s0,e0).replace(/\s+/g,' ').trim(); lu.value = ''; le.textContent = '';
+    lr.hidden = false; (lt.value ? lu : lt).focus();
+  }
+  function putLink(){
+    var u = lu.value.trim().replace(/\(/g,'%28').replace(/\)/g,'%29'), t = lt.value.trim().replace(/[\[\]]/g,'');
+    if(/^www\./i.test(u)) u = 'https://'+u;
+    if(!/^https?:\/\/[^\s]+\.[^\s]+$/i.test(u)){ le.textContent = 'Type or paste a full web address, for example https://docs.google.com/…'; lu.focus(); return; }
+    f.text.setRangeText('['+(t||u)+']('+u+')', s0, e0, 'end');
+    lr.hidden = true; f.text.focus();
+  }
+  [lt,lu].forEach(function(el){ el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); putLink(); } }); });
+  d.addEventListener('click',function(e){ var b = e.target.closest('[data-act]'); if(!b) return;
+    if(b.dataset.act==='addlink') openLink();
+    if(b.dataset.act==='cancellink'){ lr.hidden = true; f.text.focus(); }
+    if(b.dataset.act==='putlink') putLink(); });
   f.addEventListener('submit',function(e){
     e.preventDefault();
     var np = { title:f.title.value.trim(), date:f.date.value, due:f.due.value, type:f.type.value, text:f.text.value.replace(/\s+$/,'') };
