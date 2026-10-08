@@ -130,6 +130,15 @@ h1.title{font-size:clamp(2.8rem,8.5vw,6.8rem);line-height:.98;letter-spacing:-.0
   .prose ol>li.lbl>strong,.prose ol>li.lbl>span{grid-column:2}
 }
 
+/* editor image helpers */
+.note{margin:0;padding:10px 12px;border-radius:8px;background:#fff7e6;border:1px solid #f1d9a6;font-size:.85rem;line-height:1.5}
+.cprev{aspect-ratio:16/7;max-height:190px;border:1px dashed #c9c6bd;border-radius:10px;display:grid;place-items:center;overflow:hidden;color:var(--mute);font-size:.85rem;background:#fafaf8;text-align:center;padding:0 12px}
+.cprev img{width:100%;height:100%;object-fit:cover;display:block}
+.cprev.drag{border-color:var(--accent);background:#f4f6ff}
+.cprev.bad{border-color:#c62828;color:#c62828}
+.thumb,.cover{position:relative}
+.broken{position:absolute;left:10px;bottom:10px;padding:3px 9px;border-radius:999px;background:#c62828;color:#fff;font:500 .72rem var(--sans)}
+.prose .missing{display:inline-block;padding:2px 8px;border-radius:6px;background:#fdecea;color:#c62828;font-size:.85rem}
 /* footer */
 .foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:22px 0 32px;margin-top:56px;border-top:1px solid var(--line);color:var(--mute);font-size:.8rem}
 .foot button{background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;color:inherit;font:inherit}
@@ -286,10 +295,24 @@ function hash(str){
 var passHash = function(p){ return hash('myp-design:'+p); };
 function fixUrl(u){
   u = (u||'').trim();
-  var m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/open\?id=([\w-]+)/);
+  var m = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/) || u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/);
   if(m) return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1200';
+  if(/^https?:\/\/(www\.)?dropbox\.com\//i.test(u)){ u = u.replace(/([?&])dl=0/,'$1raw=1'); if(!/[?&]raw=1/.test(u)) u += (u.indexOf('?')>-1?'&':'?')+'raw=1'; }
   return /^(https?:\/\/|data:image\/)/i.test(u) ? u : '';
 }
+function urlProblem(u){
+  u = (u||'').trim();
+  if(!u || /^data:image\//i.test(u)) return '';
+  if(/photos\.app\.goo\.gl|photos\.google\.com/i.test(u)) return 'Google Photos links are web pages, not pictures. Download the photo and use Upload instead.';
+  if(/drive\.google\.com\/(drive\/folders|folderview)/i.test(u)) return 'That is a Drive folder. Link one picture file, or use Upload.';
+  if(/^(file:|[a-z]:\\|\/)/i.test(u)) return 'That is a file on your computer. Use Upload instead.';
+  if(!/^https?:\/\//i.test(u)) return 'Links must start with https://. Or use Upload.';
+  return '';
+}
+function urlWarning(u){
+  return /drive\.google\.com/i.test(u||'') ? 'Drive pictures only show if the file is shared as “Anyone with the link”.' : '';
+}
+var embedded = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
 function onColor(hex){
   var n=parseInt(hex.slice(1),16), r=n>>16, g=(n>>8)&255, b=n&255;
   return (0.299*r+0.587*g+0.114*b) > 150 ? '#14122b' : '#ffffff';
@@ -311,6 +334,7 @@ function normalise(d){
       pass: s.pass || ''
     },
     updated: d.updated || 0,
+    images: (function(m){ var o = {}; if(m && typeof m==='object') Object.keys(m).forEach(function(k){ if(/^[\w-]+$/.test(k) && /^data:image\//.test(m[k])) o[k] = m[k]; }); return o; })(d.images),
     posts: (Array.isArray(d.posts) ? d.posts : []).map(function(p){
       return { id:p.id||uid(), title:p.title||'Untitled', date:p.date||today(), tag:p.tag||'', summary:p.summary||'',
                body:p.body||'', cover:p.cover||'', pinned:!!p.pinned, hidden:!!p.hidden, featured:!!p.featured, until:p.until||'' };
@@ -322,6 +346,9 @@ var publishedSnapshot = JSON.stringify(data);
 var st = { edit:false, dirty:false, view:'list', tag:'All', q:'' };
 
 function commit(){
+  var used = {};
+  data.posts.forEach(function(p){ (p.body.match(/\(img:([\w-]+)\)/g) || []).forEach(function(m){ used[m.slice(5,-1)] = 1; }); });
+  Object.keys(data.images).forEach(function(k){ if(!used[k]) delete data.images[k]; });
   data.updated = Date.now();
   st.dirty = true;
   ls.set(DRAFT, JSON.stringify(data));
@@ -337,7 +364,10 @@ function toast(msg){
 /* ---------- tiny markdown (escaped first, so safe) ---------- */
 function inline(s){
   return s
-    .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,'<img src="$2" alt="$1" loading="lazy">')
+    .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+|img:[\w-]+)\)/g,function(_,alt,src){
+      if(src.indexOf('img:')===0){ src = (data.images && data.images[src.slice(4)]) || ''; if(!src) return '<span class="missing">[picture missing]</span>'; }
+      return '<img src="'+src+'" alt="'+alt+'" loading="lazy">';
+    })
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,'<em>$1</em>');
@@ -390,7 +420,7 @@ function art(seed){
   }
   return svg + '</svg>';
 }
-var coverHtml = function(p){ return p.cover ? '<img src="'+esc(p.cover)+'" alt="" loading="lazy">' : art(p.id); };
+var coverHtml = function(p){ return p.cover ? '<img src="'+esc(p.cover)+'" alt="" loading="lazy" data-pid="'+esc(p.id)+'">' : art(p.id); };
 
 /* ---------- views ---------- */
 function applyTheme(){
@@ -557,6 +587,7 @@ function unlock(){
   var first = !data.settings.pass;
   var d = dlg('<form class="dlg"><h3 class="dh">'+(first?'Create your passcode':'Teacher sign in')+'</h3>'+
     '<p class="hint">'+(first ? 'Choose a passcode (4+ characters). You will type it each time you want to edit. Write it down.' : 'Enter your passcode to add, edit or remove posts.')+'</p>'+
+    (embedded ? '<p class="note">You are viewing this inside another page (such as Google Sites). Editing and image uploads work best in the downloaded file opened directly in your browser.</p>' : '')+
     '<label><span class="lab">Passcode</span><input type="password" name="pw" required minlength="'+(first?4:1)+'" autocomplete="off"></label>'+
     '<p class="err" role="alert"></p>'+
     '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">'+(first?'Save & continue':'Sign in')+'</button></div></form>');
@@ -580,13 +611,17 @@ function editor(id){
   var cover = p.cover;
   var tags = Array.from(new Set(DEFAULT_TAGS.concat(data.posts.map(function(x){ return x.tag; }).filter(Boolean))));
   var d = dlg('<form class="dlg" autocomplete="off"><h3 class="dh">'+(ex?'Edit post':'New post')+'</h3>'+
+    (embedded ? '<p class="note"><b>You are inside an embedded page.</b> Uploads and saving can be blocked here. For reliable editing, open the downloaded .html file directly in your browser, then publish from there.</p>' : '')+
     '<label><span class="lab">Title</span><input name="title" required maxlength="120" value="'+esc(p.title)+'"></label>'+
     '<div class="two"><label><span class="lab">Date</span><input type="date" name="date" required value="'+esc(p.date)+'"></label>'+
     '<label><span class="lab">Category</span><input name="tag" list="tags" maxlength="40" value="'+esc(p.tag)+'"><datalist id="tags">'+tags.map(function(t){ return '<option value="'+esc(t)+'">'; }).join('')+'</datalist></label></div>'+
     '<label><span class="lab">Short summary</span><input name="summary" maxlength="200" value="'+esc(p.summary)+'"></label>'+
-    '<div class="field"><span class="lab">Cover image</span><div class="inline"><input name="cover" placeholder="Paste an image link…" value="'+(cover.indexOf('data:')===0?'':esc(cover))+'">'+
-    '<label class="btn">Upload<input type="file" accept="image/*" hidden></label><button type="button" class="btn" data-act="nocover">Remove</button></div>'+
-    '<p class="hint" id="cstat">'+(cover.indexOf('data:')===0?'Image attached.':'No image? A geometric cover is generated for you.')+'</p></div>'+
+    '<div class="field"><span class="lab">Cover image</span>'+
+      '<div class="cprev" id="cprev" aria-live="polite"></div>'+
+      '<div class="inline"><input name="cover" placeholder="…or paste an image link" value="'+(cover.indexOf('data:')===0?'':esc(cover))+'">'+
+      '<button type="button" class="btn" data-act="pick">Upload image</button><button type="button" class="btn" data-act="nocover">Remove</button></div>'+
+      '<input type="file" accept="image/*" id="cfile" hidden>'+
+      '<p class="hint" id="cstat">Drag a picture onto the box, paste one, or use Upload. JPG or PNG work best.</p></div>'+
     '<div class="field"><span class="lab">Post</span><div class="tb">'+
       '<button type="button" class="btn sm" data-act="fmt" data-f="h">Heading</button>'+
       '<button type="button" class="btn sm" data-act="fmt" data-f="b"><b>Bold</b></button>'+
@@ -594,32 +629,83 @@ function editor(id){
       '<button type="button" class="btn sm" data-act="fmt" data-f="ul">• List</button>'+
       '<button type="button" class="btn sm" data-act="fmt" data-f="ol">1. List</button>'+
       '<button type="button" class="btn sm" data-act="fmt" data-f="q">“ Quote</button>'+
-      '<button type="button" class="btn sm" data-act="fmt" data-f="a">Link</button></div>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="a">Link</button>'+
+      '<button type="button" class="btn sm" data-act="fmt" data-f="img">Image</button></div>'+
+      '<input type="file" accept="image/*" id="bfile" hidden>'+
       '<textarea name="body" rows="11"></textarea>'+
-      '<p class="hint">Leave a blank line for a new paragraph. Use # for a heading. Images: ![description](https://image-link).</p></div>'+
+      '<p class="hint" id="bstat">Blank line = new paragraph. # makes a heading. Click <b>Image</b> (or paste a picture) to add one inside the post.</p></div>'+
     '<div class="two"><label class="checks"><span style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="featured"> Show in “Now teaching”</span></label>'+
     '<label><span class="lab">…until (date)</span><input type="date" name="until" value="'+esc(p.until)+'"></label></div>'+
     '<div class="checks"><label><input type="checkbox" name="pinned"> Pin to top</label><label><input type="checkbox" name="hidden"> Hide (keep as draft)</label></div>'+
     '<div class="actions"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn primary">Save post</button></div></form>');
   var f = d.querySelector('form');
   f.body.value = p.body; f.pinned.checked = p.pinned; f.hidden.checked = p.hidden; f.featured.checked = p.featured;
-  var stat = d.querySelector('#cstat');
-  f.cover.addEventListener('input', function(){ cover = f.cover.value; stat.textContent = ''; });
-  d.querySelector('input[type=file]').addEventListener('change', function(e){
-    var file = e.target.files[0]; if(!file) return;
+  var stat = d.querySelector('#cstat'), bstat = d.querySelector('#bstat'), prev = d.querySelector('#cprev');
+
+  function showPreview(){
+    var u = fixUrl(cover);
+    if(!cover){ prev.className = 'cprev'; prev.textContent = 'No cover image. A generated design is used.'; return; }
+    if(!u){ prev.className = 'cprev bad'; prev.textContent = 'This link can’t be used.'; return; }
+    prev.className = 'cprev'; prev.innerHTML = '<img alt="Cover preview">';
+    var im = prev.querySelector('img');
+    im.onerror = function(){ prev.className = 'cprev bad'; prev.textContent = 'This link did not load. It must be a public image link, or use Upload.'; };
+    im.src = u;
+  }
+  function kb(url){ return Math.round(url.length*0.75/1024); }
+  function badFile(file){
+    if(!/^image\//.test(file.type) && !/\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(file.name||'')) return 'That file is not a picture. Use JPG or PNG.';
+    if(file.size > 30*1024*1024) return 'That picture is over 30 MB. Choose a smaller one.';
+    return '';
+  }
+  function setCoverFile(file){
+    var bad = badFile(file); if(bad){ stat.textContent = bad; return; }
     stat.textContent = 'Resizing…';
-    shrink(file, 900, 0.72).then(function(url){
-      cover = url; f.cover.value = '';
-      stat.textContent = 'Image attached (' + Math.round(url.length*0.75/1024) + ' KB).';
-    }).catch(function(){ stat.textContent = 'Could not read that image.'; });
+    shrink(file, 1000, 0.75).then(function(url){
+      cover = url; f.cover.value = ''; showPreview();
+      stat.textContent = 'Image attached (' + kb(url) + ' KB).' + (kb(url) > 300 ? ' That is quite large; the page will still work.' : '');
+    }).catch(function(){ stat.textContent = 'Could not read that picture. Try saving it as a JPG or PNG first (iPhone HEIC photos can fail).'; });
+  }
+  function addBodyImage(file){
+    var bad = badFile(file); if(bad){ bstat.textContent = bad; return; }
+    bstat.textContent = 'Resizing…';
+    shrink(file, 1000, 0.75).then(function(url){
+      var key = 'i' + Math.random().toString(36).slice(2,8);
+      data.images[key] = url;
+      var ta = f.body, s = ta.selectionStart, e = ta.selectionEnd;
+      ta.setRangeText('\n\n![Describe the picture](img:'+key+')\n\n', s, e, 'end');
+      ta.focus();
+      bstat.textContent = 'Picture added to the post (' + kb(url) + ' KB). Replace “Describe the picture” with a short description.';
+    }).catch(function(){ bstat.textContent = 'Could not read that picture. Try a JPG or PNG.'; });
+  }
+  function imageFrom(dt){ var fl = dt && dt.files; for(var i=0;fl && i<fl.length;i++){ if(/^image\//.test(fl[i].type)) return fl[i]; } return null; }
+
+  showPreview();
+  f.cover.addEventListener('input', function(){
+    cover = f.cover.value.trim(); stat.textContent = cover ? (urlProblem(cover) || urlWarning(cover) || 'Checking the link…') : '';
+    showPreview();
+  });
+  d.querySelector('#cfile').addEventListener('change', function(e){ var file = e.target.files[0]; e.target.value = ''; if(file) setCoverFile(file); });
+  d.querySelector('#bfile').addEventListener('change', function(e){ var file = e.target.files[0]; e.target.value = ''; if(file) addBodyImage(file); });
+  ['dragenter','dragover'].forEach(function(n){ prev.addEventListener(n, function(e){ e.preventDefault(); prev.classList.add('drag'); }); });
+  ['dragleave','drop'].forEach(function(n){ prev.addEventListener(n, function(e){ e.preventDefault(); prev.classList.remove('drag'); }); });
+  prev.addEventListener('drop', function(e){ var file = imageFrom(e.dataTransfer); if(file) setCoverFile(file); else stat.textContent = 'Drop a picture file here.'; });
+  f.body.addEventListener('dragover', function(e){ if(imageFrom(e.dataTransfer)) e.preventDefault(); });
+  f.body.addEventListener('drop', function(e){ var file = imageFrom(e.dataTransfer); if(file){ e.preventDefault(); addBodyImage(file); } });
+  d.addEventListener('paste', function(e){
+    var file = imageFrom(e.clipboardData); if(!file) return;
+    e.preventDefault();
+    if(e.target === f.body) addBodyImage(file); else setCoverFile(file);
   });
   d.addEventListener('click', function(e){
     var b = e.target.closest('[data-act]'); if(!b) return;
-    if(b.dataset.act==='nocover'){ cover = ''; f.cover.value = ''; stat.textContent = 'Cover removed.'; }
-    if(b.dataset.act==='fmt') format(f.body, b.dataset.f);
+    var a = b.dataset.act;
+    if(a==='pick') d.querySelector('#cfile').click();
+    if(a==='nocover'){ cover = ''; f.cover.value = ''; stat.textContent = 'Cover removed.'; showPreview(); }
+    if(a==='fmt'){ if(b.dataset.f==='img') d.querySelector('#bfile').click(); else format(f.body, b.dataset.f); }
   });
   f.addEventListener('submit', function(e){
     e.preventDefault();
+    if(cover && (urlProblem(cover) || !fixUrl(cover))){ stat.textContent = urlProblem(cover) || 'That link can’t be used. Paste a link that starts with https:// or use Upload.'; f.cover.focus(); return; }
     var np = { title:f.title.value.trim(), date:f.date.value, tag:f.tag.value.trim(), summary:f.summary.value.trim(),
                body:f.body.value, cover:fixUrl(cover), pinned:f.pinned.checked, hidden:f.hidden.checked,
                featured:f.featured.checked, until:f.until.value };
@@ -630,6 +716,7 @@ function editor(id){
 }
 function format(ta, kind){
   var s = ta.selectionStart, e = ta.selectionEnd, v = ta.value, sel = v.slice(s,e);
+  if(kind==='img') return;
   if(kind==='b' || kind==='i'){
     var m = kind==='b' ? '**' : '*';
     ta.setRangeText(m+(sel||'text')+m, s, e, 'select');
@@ -696,13 +783,14 @@ function buildPage(){
 function publishDialog(){
   var code = buildPage();
   var kb = Math.round(code.length/1024);
+  var imgBytes = Object.keys(data.images).reduce(function(n,k){ return n + data.images[k].length; }, 0) + data.posts.reduce(function(n,p){ return n + (p.cover.indexOf('data:')===0 ? p.cover.length : 0); }, 0);
   var d = dlg('<div class="dlg"><h3 class="dh">Publish to Google Sites</h3>'+
     '<ol class="steps">'+
       '<li>Click <b>Copy embed code</b> (or download the file).</li>'+
       '<li>In Google Sites: <b>Insert → Embed → Embed code</b>, paste, then <b>Next → Insert</b>.</li>'+
       '<li>To update later: click the embed, choose its <b>edit</b> icon, replace the old code with this new code.</li>'+
       '<li>Finally press <b>Publish</b> at the top of Google Sites.</li></ol>'+
-    '<p class="hint">Size: '+kb+' KB. '+(kb>600?'<b>That is large</b>, so Google Sites may refuse it. Use image links instead of uploads, or remove old images.':'Comfortable for an embed.')+'</p>'+
+    '<p class="hint">Size: '+kb+' KB (uploaded pictures: '+Math.round(imgBytes/1024)+' KB). '+(kb>600?'<b>That is large</b>, so Google Sites may refuse it. Use image links instead of uploads, or remove old images.':'Comfortable for an embed.')+'</p>'+
     '<textarea class="code" readonly aria-label="Embed code"></textarea>'+
     '<div class="actions"><button class="btn" data-act="discard">Discard unpublished changes</button><button class="btn" data-act="dl">Download .html</button><button class="btn primary" data-act="copy">Copy embed code</button></div></div>');
   var ta = d.querySelector('textarea'); ta.value = code;
@@ -756,6 +844,14 @@ function onClick(e){
   var fn = A[t.dataset.act];
   if(fn) fn(t.dataset.id, t, e);
 }
+app.addEventListener('error', function(e){
+  var t = e.target;
+  if(!t || t.tagName !== 'IMG') return;
+  if(t.parentNode && (t.parentNode.classList.contains('thumb') || t.parentNode.classList.contains('cover'))){
+    var p = data.posts.find(function(x){ return x.id === t.getAttribute('data-pid'); });
+    t.parentNode.innerHTML = art(p ? p.id : 'x') + (st.edit ? '<span class="broken">Image link not working</span>' : '');
+  } else if(t.closest && t.closest('.prose')){ t.style.display = 'none'; }
+}, true);
 app.addEventListener('click', onClick);
 layer.addEventListener('click', onClick);
 app.addEventListener('input', function(e){
